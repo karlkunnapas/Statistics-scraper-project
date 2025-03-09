@@ -3,13 +3,13 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
 
 
-def print_options():
+def print_options(data_list):
     """
     Function "print_options" definition
     The function displays on the screen the saved names from the webpage along with their serial numbers.
     """
-    for i in range(1, 19):
-        print(str(i) + ".", indicator_names[i - 1])
+    for i in range(1, len(data_list) + 1):
+        print(str(i) + ".", data_list[i - 1]["name"])
 
 
 """Launch Firefox in headless mode."""
@@ -19,44 +19,32 @@ browser = webdriver.Firefox(options=options)
 
 """Saving indicator names and their values from Statistics Estonia's homepage."""
 browser.get('https://www.stat.ee/en/avasta-statistikat/main-indicators')
-webpage_names = browser.find_elements(By.CLASS_NAME, "button__label")  # Names
-webpage_indicators = browser.find_elements(By.CLASS_NAME, "indicator-single__value")  # Indicators
-time_updated = browser.find_elements(By.CLASS_NAME, "indicator-single__bottom__date")  # Time, when it was updated
+indicators_names = browser.find_elements(By.CLASS_NAME, "indicator-single__title")  # Names
+indicators_values = browser.find_elements(By.CLASS_NAME, "indicator-single__value")  # Indicators
 indicators_change = browser.find_elements(By.CLASS_NAME, "indicator-single__details")  # Change, since last update
 
 
-"""Writing the numerical values of indicators to a file."""
+"""Writing data of the indicators to a file."""
 with open("Indicators.txt", "w", encoding="UTF-8") as f:
-    for indicator, indicator_change in zip(webpage_indicators, indicators_change):
-        f.write(f"{indicator.text};{indicator_change.text}" + "\n")
-
-with open("Indicators_change.txt", "w", encoding="UTF-8") as f:
-    for indicator_change in indicators_change:
-        f.write(indicator_change.text + "\n")
-
-"""Adding indicator names to a list."""
-indicator_names = []
-for name in webpage_names:
-    indicator_names.append(name.text)
+    for name, value, change in zip(indicators_names, indicators_values, indicators_change):
+        f.write(f"{name.text};{value.text};{change.text}" + "\n")
 
 browser.close()
 
 
-"""Reading indicators from the file and adding them line by line to a list without newline characters."""
+"""Reading indicators from the file and adding them line by line to a dictionary without newline characters."""
 indicators = []
 with open("Indicators.txt") as f:
     for indicator in f:
         data = indicator.strip("\n")
-        indicators.append(data.split(";"))
+        data = data.split(";")
+        indicators.append({"name": data[0], "value": data[1], "change": data[2]})
 
-indicators_change = []
-with open("Indicators_change.txt") as f:
-    for indicator_change in f:
-        indicators_change.append(indicator_change.strip("\n"))
 
 """Displaying all saved main indicator names from the webpage with serial numbers to the user."""
 print("Which indicator would you like to display? \nOptions:")
-print_options()
+print_options(indicators)
+
 
 """
 Asking the user for an integer, i.e., the serial number of the indicator, and displaying
@@ -68,13 +56,13 @@ while True:
         choice = int(choice)
         if choice < 1:
             raise IndexError
-        elif indicators_change[choice - 1]:
-            print("According to Statistics Estonia, the", indicator_names[choice - 1].lower(), "is",
-                  indicators[choice - 1][0], "and it has changed", indicators[choice - 1][1] + ".")
-            choice = input("Enter the serial number (as an integer): ")
+        elif indicators[choice - 1]["change"]:
+            print("According to Statistics Estonia, the", indicators[choice - 1]["name"].lower(), "is",
+                  indicators[choice - 1]["value"], "and it has changed", indicators[choice - 1]["change"] + ".")
         else:
-            print("According to Statistics Estonia, the", indicator_names[choice - 1].lower(), "is",
-                  indicators[choice - 1][0] + ".")
+            print("According to Statistics Estonia, the", indicators[choice - 1]["name"].lower(), "is",
+                  indicators[choice - 1]["value"] + ".")
+        choice = input("Enter the serial number (as an integer): ")
 
     except IndexError:
         choice = input("Please enter a valid serial number: ")
